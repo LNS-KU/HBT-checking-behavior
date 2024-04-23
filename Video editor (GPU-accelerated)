@@ -1,0 +1,122 @@
+import cv2
+import ffmpeg
+import tkinter as tk
+from tkinter import filedialog
+import time
+
+def crop_video(input_file, output_file, x, y, width, height, gpu=True):
+    input_stream = ffmpeg.input(input_file)
+    cropped = input_stream.crop(x, y, width, height)
+    output = ffmpeg.output(cropped, output_file, c='copy', **({'c:v': 'h264_nvenc'} if gpu else {}))
+
+    try:
+        ffmpeg.run(output, capture_stderr=True)
+    except ffmpeg.Error as e:
+        print("FFmpeg error:", e.stderr.decode())
+
+def trim_video(input_file, output_file, start_time, duration):
+    input_stream = ffmpeg.input(input_file)
+    trimmed = input_stream.filter('trim', start=start_time, end=start_time + duration)
+    trimmed = trimmed.filter('setpts', 'PTS-STARTPTS')
+    output = ffmpeg.output(trimmed, output_file)
+
+    try:
+        ffmpeg.run(output, capture_stderr=True)
+    except ffmpeg.Error as e:
+        print("FFmpeg error:", e.stderr.decode())
+
+def select_roi(event, x, y, flags, param):
+    global roi_selected, roi_start, roi_end, roi_dragging, roi_offset_x, roi_offset_y
+
+    if event == cv2.EVENT_LBUTTONDOWN and is_point_inside_rectangle(x, y, roi_start, roi_end):
+        roi_dragging = True
+        roi_offset_x = x - roi_start[0]
+        roi_offset_y = y - roi_start[1]
+    elif event == cv2.EVENT_LBUTTONUP:
+        roi_dragging = False
+    elif event == cv2.EVENT_MOUSEMOVE and roi_dragging:
+        roi_start = (x - roi_offset_x, y - roi_offset_y)
+        roi_end = (roi_start[0] + 400, roi_start[1] + 400)
+
+def is_point_inside_rectangle(x, y, p1, p2):
+    return p1[0] < x < p2[0] and p1[1] < y < p2[1]
+
+def browse_input_file():
+    root = tk.Tk()
+    root.withdraw()
+    input_file_path = filedialog.askopenfilename()
+    return input_file_path
+
+def browse_output_file():
+    root = tk.Tk()
+    root.withdraw()
+    output_file_path = filedialog.asksaveasfilename(defaultextension=".mp4", filetypes=[("MP4 files", "*.mp4")])
+    return output_file_path
+
+def prompt_start_time():
+    while True:
+        start_time_str = input("Enter start time in seconds: ")
+        try:
+            start_time = float(start_time_str)
+            return start_time
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+
+# Example usage
+input_file = browse_input_file()
+output_file = browse_output_file()
+
+if not input_file or not output_file:
+    print("Please select input and output files.")
+    exit()
+
+roi_selected = True
+roi_start = (100, 100)  # Initial position of the square
+roi_end = (roi_start[0] + 400, roi_start[1] + 400)
+roi_dragging = False
+roi_offset_x = 0
+roi_offset_y = 0
+
+# Read the first frame of the video
+cap = cv2.VideoCapture(input_file)
+ret, frame = cap.read()
+# Display the first frame with the selected ROI
+cv2.namedWindow('Select ROI')
+cv2.setMouseCallback('Select ROI', select_roi)
+
+while True:
+    clone_frame = frame.copy()
+    cv2.rectangle(clone_frame, roi_start, roi_end, (0, 255, 0), 2)
+    cv2.imshow('Select ROI', clone_frame)
+
+    # Break the loop if 'q' is pressed
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q'):
+        break
+
+cv2.destroyAllWindows()
+
+# Calculate the ROI coordinates
+x = roi_start[0]
+y = roi_start[1]
+width = 400  # Fixed width
+height = 400  # Fixed height
+
+# Prompt the user to enter the start time
+start_time = prompt_start_time()
+
+# Release OpenCV capture object
+cap.release()
+
+
+# Generate a unique filename for the cropped video
+timestamp = int(time.time())  # Current timestamp
+cropped_filename = f"cropped_video_{timestamp}.mp4"
+
+# Crop the video within the selected ROI
+crop_video(input_file, cropped_filename, x, y, width, height, gpu=True)
+
+# Trim the video to 60 minutes from the specified start time
+duration = 60 * 60  # Duration in seconds (60 minutes)
+trim_video(cropped_filename, output_file, start_time, duration)
+
