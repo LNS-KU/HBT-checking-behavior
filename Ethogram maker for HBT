@@ -1,0 +1,96 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import tkinter as tk
+from tkinter import simpledialog, filedialog
+
+# Open file dialog to select CSV file
+root = tk.Tk()
+root.withdraw()
+csv_file_path = filedialog.askopenfilename(title="Select CSV File", filetypes=[("CSV Files", "*.csv")])
+
+if csv_file_path:
+    # Load the CSV file into a DataFrame
+    df = pd.read_csv(csv_file_path)
+
+    # Rename columns to match code expectations
+    df.columns = ['track', 'frame_idx', 'instance.score', 'nose.x', 'nose.y', 'nose.score', 'tail.x', 'tail.y', 'tail.score']
+
+    # Prompt user to input x-coordinate, y-coordinate, and radius
+    x_coord = simpledialog.askinteger("Input", "Enter x-coordinate:")
+    y_coord = simpledialog.askinteger("Input", "Enter y-coordinate:")
+    radius = simpledialog.askinteger("Input", "Enter radius:")
+
+    if x_coord is not None and y_coord is not None and radius is not None:
+        # Calculate the distance between nose and tail
+        df['nose_tail_distance'] = np.sqrt((df['nose.x'] - df['tail.x'])**2 + (df['nose.y'] - df['tail.y'])**2)
+
+        # Filter data based on user input
+        nose_in_roi = (df['nose.x'] - x_coord)**2 + (df['nose.y'] - y_coord)**2 <= radius**2
+        distance_condition = df['nose_tail_distance'] > 90
+        event_condition = nose_in_roi & distance_condition
+
+        # Identify consecutive events
+        event_start = []
+        event_end = []
+        in_event = False
+        for i in range(len(event_condition)):
+            if event_condition[i] and not in_event:
+                event_start.append(i)
+                in_event = True
+            elif not event_condition[i] and in_event:
+                event_end.append(i-1)
+                in_event = False
+
+        # Filter out events with duration < 3 frames
+        valid_events = []
+        for start, end in zip(event_start, event_end):
+            if end - start >= 2:
+                valid_events.append((start, end))
+            elif start == 0 or end == len(event_condition) - 1:
+                valid_events.append((start, end))
+
+        # Plot valid events
+        plt.figure()
+        ax = plt.gca()
+        for start, end in valid_events:
+            start_frame = df.iloc[start, 1]  # Frame number at start
+            end_frame = df.iloc[end, 1]  # Frame number at end
+            ax.hlines(y=0.5, xmin=start_frame, xmax=end_frame, linewidth=100, color='b')
+
+        plt.xlabel('Frame Number')
+        plt.title('Events: Nose in ROI and Distance > 90 (Duration >= 2 frames)')
+        plt.ylim(0, 1)  # Set y-axis limits to a fixed range
+        plt.yticks([])  # Remove y-axis tick labels
+
+        # Add text box with event count
+        event_count = len(valid_events)
+        plt.text(0.95, 0.05, f'Event Count: {event_count}', transform=plt.gca().transAxes, fontsize=10,
+                 verticalalignment='bottom', horizontalalignment='right')
+
+        # Save event plot as an image
+        root = tk.Tk()
+        root.withdraw()
+        img_file_path = filedialog.asksaveasfilename(title="Save Event Plot", defaultextension=".png",
+                                                     filetypes=[("PNG Files", "*.png")])
+        if img_file_path:
+            plt.savefig(img_file_path, dpi=300, bbox_inches='tight')
+
+        # Store event data in a DataFrame
+        event_df = pd.DataFrame(columns=['Start Frame', 'End Frame'])
+        for idx, (start, end) in enumerate(valid_events):
+            event_df.loc[idx] = [start, end]
+
+        # Save event data to Excel file
+        excel_file_path = filedialog.asksaveasfilename(title="Save Event Data", defaultextension=".xlsx",
+                                                       filetypes=[("Excel Files", "*.xlsx")])
+        if excel_file_path:
+            event_df.to_excel(excel_file_path, index=False)
+
+        plt.show()
+
+    else:
+        print("Invalid input for coordinates and/or radius.")
+
+else:
+    print("No CSV file selected.")
