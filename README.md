@@ -28,3 +28,11 @@ SLEAP에서 추출한 pose estimation data(.csv)를 활용하여 Checking behavi
 >- **ROI extractor for HBT**에서 얻은 ROI 정보(x,y,r)를 순서대로 입력
 >- Ethogram이 저장될 위치와 파일명을 입력 (png 형태로 저장됨)
 >- excel 파일이 저장될 위치와 파일명을 입력
+
+
+## Rotate Video
+영상 회전시키기 (A-SOiD 분석에 필요), GPU 사용
+### 사용방법
+>- library 다운로드 받기 : pip install tkinter moviepy
+>- 
+
