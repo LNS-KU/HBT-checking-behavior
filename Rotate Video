@@ -1,58 +1,50 @@
+import ffmpeg
 import tkinter as tk
-from tkinter import filedialog, simpledialog
-from moviepy.editor import VideoFileClip
-import os
+from tkinter import filedialog
+import subprocess
 
-def select_video_file():
-    file_path = filedialog.askopenfilename(
-        title="Select a Video File",
-        filetypes=(("MP4 files", "*.mp4"), ("All files", "*.*"))
-    )
-    return file_path
-
-def select_save_directory():
-    directory = filedialog.askdirectory(title="Select Save Directory")
-    return directory
-
-def get_rotation_angle():
-    angle = simpledialog.askinteger("Input", "Enter angle to rotate (in degrees):",
-                                    minvalue=-360, maxvalue=360)
-    return angle
-
-def rotate_video(input_path, output_directory, angle):
-    video = VideoFileClip(input_path)
-    rotated_video = video.rotate(angle)
-    output_path = os.path.join(output_directory, "rotated_video.mp4")
-    
-    # Use ffmpeg with GPU acceleration for encoding
-    rotated_video.write_videofile(
-        output_path,
-        codec='h264_nvenc',
-        audio_codec='aac'
-    )
-    print(f"Rotated video saved to {output_path}")
-
-def main():
+def rotate_video():
+    # Open file dialog to select input video
     root = tk.Tk()
-    root.withdraw()  # Hide the root window
-
-    input_path = select_video_file()
-    if not input_path:
-        print("No video file selected.")
+    root.withdraw()
+    input_video_path = filedialog.askopenfilename(title="Select Video to Rotate")
+    if not input_video_path:
         return
 
-    angle = get_rotation_angle()
-    if angle is None:
-        print("No angle provided.")
-        return
+    # Get rotation angle from user
+    angle = float(input("Enter rotation angle (degrees): "))
 
-    output_directory = select_save_directory()
-    if not output_directory:
-        print("No save directory selected.")
+    # Open file dialog to select output directory and get output file name
+    output_dir = filedialog.askdirectory(title="Select Output Directory")
+    if not output_dir:
         return
+    output_file_name = input("Enter output file name (e.g., rotated_video.mp4): ")
+    output_video_path = f"{output_dir}/{output_file_name}"
 
-    rotate_video(input_path, output_directory, angle)
-    print("Video rotation complete.")
+    # Check if GPU acceleration is available
+    gpu_available = check_gpu_availability()
+
+    # Construct FFmpeg command with rotation and GPU acceleration (if available)
+    ffmpeg_command = [
+        "ffmpeg",
+        "-i", input_video_path,
+        "-vf", f"rotate={angle}*PI/180",
+        "-c:v", "h264_nvenc" if gpu_available else "libx264",
+        "-preset", "medium",
+        output_video_path
+    ]
+
+    # Run FFmpeg command
+    subprocess.run(ffmpeg_command, check=True)
+
+def check_gpu_availability():
+    try:
+        output = subprocess.check_output(["ffmpeg", "-codecs"], universal_newlines=True)
+        if "nvenc" in output:
+            return True
+    except subprocess.CalledProcessError:
+        pass
+    return False
 
 if __name__ == "__main__":
-    main()
+    rotate_video()
