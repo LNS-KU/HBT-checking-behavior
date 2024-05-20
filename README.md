@@ -37,3 +37,11 @@ SLEAP에서 추출한 pose estimation data(.csv)를 활용하여 Checking behavi
 
 ## A-SOiD
 Anaconda prompt 실행 후 코드 실행
+
+## SLEAP
+Anaconda prompt 실행 후 아래 코드 실행
+F:
+cd sleap
+conda activate sleap
+sleap-label
+
