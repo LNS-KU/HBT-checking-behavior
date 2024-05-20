@@ -34,3 +34,6 @@ SLEAP에서 추출한 pose estimation data(.csv)를 활용하여 Checking behavi
 영상 회전시키기 (A-SOiD 분석에 필요), GPU 사용
 ### 사용방법
 >- ffmpeg 설치 : pip install ffmpeg-python
+
+## A-SOiD
+Anaconda prompt 실행 후 코드 실행
