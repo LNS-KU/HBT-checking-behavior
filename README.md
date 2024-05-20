@@ -33,6 +33,6 @@ SLEAP에서 추출한 pose estimation data(.csv)를 활용하여 Checking behavi
 ## Rotate Video
 영상 회전시키기 (A-SOiD 분석에 필요), GPU 사용
 ### 사용방법
->- library 다운로드 받기 : pip install tkinter moviepy
+>- library 다운로드 받기 : pip install tk
 >- 
 
