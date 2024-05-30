@@ -1,0 +1,103 @@
+import tkinter as tk
+from tkinter import filedialog
+import pandas as pd
+import cv2
+import os
+
+# Function to select a file using a dialogue window
+def select_file(file_type, file_extension):
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(filetypes=[(file_type, file_extension)])
+    return file_path
+
+# Function to select a directory using a dialogue window
+def select_directory():
+    root = tk.Tk()
+    root.withdraw()
+    directory_path = filedialog.askdirectory()
+    return directory_path
+
+# Function to label the video using the CSV data
+def label_video(video_path, csv_path_1, csv_path_2, save_dir):
+    # Load the CSV files
+    data_1 = pd.read_csv(csv_path_1)
+    data_2 = pd.read_csv(csv_path_2)
+    
+    # Replace NaN values with 0 in the first CSV
+    data_1 = data_1.fillna(0)
+    
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error opening video file")
+        return
+    
+    # Get video properties
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    # Define the codec and create VideoWriter object
+    video_name = os.path.basename(video_path)
+    output_path = os.path.join(save_dir, f'labeled_{video_name}')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    
+    frame_count = 0
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Get the rows corresponding to the current frame from the first CSV
+        frame_data = data_1[data_1.iloc[:, 1] == frame_count]
+        
+        for _, row in frame_data.iterrows():
+            # Draw points on the frame
+            nose = (int(row.iloc[3]), int(row.iloc[4]))
+            tailbase = (int(row.iloc[6]), int(row.iloc[7]))
+            earL = (int(row.iloc[9]), int(row.iloc[10]))
+            earR = (int(row.iloc[12]), int(row.iloc[13]))
+            
+            # Draw circles on the frame
+            cv2.circle(frame, nose, 2, (0, 0, 255), -1)    # Red
+            cv2.circle(frame, tailbase, 2, (255, 0, 0), -1) # Blue
+            cv2.circle(frame, earL, 2, (0, 255, 0), -1)    # Green
+            cv2.circle(frame, earR, 2, (255, 255, 0), -1)  # Cyan
+        
+        # Get the time corresponding to the current frame
+        current_time = frame_count / fps
+        
+        # Get the row from the second CSV closest to the current time
+        closest_row = data_2.iloc[(data_2.iloc[:, 0] - current_time).abs().argmin()]
+        
+        # Determine the text based on the value in column 2
+        text = "Grooming" if closest_row.iloc[1] == 1 else "Other"
+        
+        # Write the text on the frame
+        cv2.putText(frame, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+        
+        # Write the labeled frame to the output video
+        out.write(frame)
+        
+        frame_count += 1
+    
+    # Release everything
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    print(f"Labeled video saved to {output_path}")
+
+# Main function
+def main():
+    video_path = select_file("Video files", "*.mp4")
+    csv_path_1 = select_file("CSV files", "*.csv")
+    csv_path_2 = select_file("CSV files", "*.csv")
+    save_dir = select_directory()
+    
+    label_video(video_path, csv_path_1, csv_path_2, save_dir)
+
+if __name__ == "__main__":
+    main()
