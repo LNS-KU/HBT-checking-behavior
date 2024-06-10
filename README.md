@@ -39,9 +39,9 @@ SLEAP에서 추출한 pose estimation data(.csv)를 활용하여 Checking behavi
 Anaconda prompt 실행 후 코드 실행
 
 ## SLEAP
-Anaconda prompt 실행 후 아래 코드 실행
-F:
-cd sleap
-conda activate sleap
-sleap-label
+Anaconda prompt 실행 후 아래 코드 실행<br/><br/>
+F:<br/><br/>
+cd sleap<br/><br/>
+conda activate sleap<br/><br/>
+sleap-label<br/><br/>
 
