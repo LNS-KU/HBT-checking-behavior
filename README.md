@@ -40,8 +40,17 @@ Anaconda prompt 실행 후 코드 실행
 
 ## SLEAP
 Anaconda prompt 실행 후 아래 코드 실행<br/><br/>
-F:<br/><br/>
-cd sleap<br/><br/>
-conda activate sleap<br/><br/>
+F:<br/>
+cd sleap<br/>
+conda activate sleap<br/>
 sleap-label<br/><br/>
 
+## Video ffmpeg re-encoding
+비디오 그대로 SLEAP이 처리를 못함. 아래 코드로 re-encoding한 비디오를 사용. IDLE 말고 Conda prompt에서 사용<br/>
+>- ffmpeg -y -i "input.mp4" -c:v libx264 -pix_fmt yuv420p -preset superfast -crf 23 "output.mp4"<br/>
+<br/>
+GPU 가속 사용 시<br/>
+>- ffmpeg -y -hwaccel cuda -i "input.mp4" -c:v h264_nvenc -preset fast -crf 23 "output.mp4"<br/>
+
+## Video resize
+FHD 비디오는 현 GPU로 처리가 힘듦. 가로 세로 각 1/3로 줄이는 코드 <br/>
