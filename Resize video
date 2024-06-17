@@ -1,0 +1,38 @@
+import cv2
+
+def resize_video(input_file, output_file):
+    cap = cv2.VideoCapture(input_file)
+    if not cap.isOpened():
+        print("Error: Could not open video file.")
+        return
+
+    # Get video properties
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # You can change the codec as per your requirement
+    out = cv2.VideoWriter(output_file, fourcc, fps, (width // 3, height // 3)) # Change '3' if you want to resize with different ratio
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Resize the frame
+        resized_frame = cv2.resize(frame, (width // 3, height // 3))
+
+        # Write the resized frame to the output video file
+        out.write(resized_frame)
+
+    # Release everything when done
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+
+# Example usage:
+input_file = 'input.mp4'
+output_file = r'output.mp4'
+# Use '/' instead of '\' in the path
+resize_video(input_file, output_file)
